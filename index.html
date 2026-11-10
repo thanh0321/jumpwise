@@ -15,7 +15,6 @@
     }
 
     * { box-sizing: border-box; }
-
     body {
       min-height: 100vh;
       margin: 0;
@@ -199,10 +198,6 @@
   </main>
 
   <script type="module">
-    /*
-     * Tạo Firebase project, bật Google + Email/Password Authentication
-     * và Firestore, sau đó điền cấu hình ở đây.
-     */
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_PROJECT.firebaseapp.com",
@@ -235,7 +230,6 @@
         "auth/invalid-credential": "Email hoặc mật khẩu không đúng.",
         "auth/popup-closed-by-user": "Cửa sổ đăng nhập đã bị đóng."
       };
-
       return messages[error.code] || "Có lỗi xảy ra. Vui lòng thử lại.";
     }
 
@@ -374,7 +368,6 @@
 
     void initializeFirebase();
 
-    // Game
     const WIDTH = 960;
     const HEIGHT = 540;
     const GROUND_Y = 440;
