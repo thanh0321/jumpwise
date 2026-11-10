@@ -1,0 +1,846 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10172b">
+  <meta name="description" content="Jumpwise — game runner 2D với boss thích nghi theo lối chơi của bạn.">
+  <title>Jumpwise — Đọc vị boss</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #080b16;
+      color: #f5f7ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: radial-gradient(ellipse at 50% 0%, #202c53 0%, transparent 55%), #080b16;
+    }
+
+    .shell { width: min(960px, 100%); }
+    header { margin-bottom: 12px; }
+    h1 { margin: 0; font-size: clamp(24px, 5vw, 36px); letter-spacing: .08em; }
+    .subtitle, .help { color: #aab4d3; font-size: 14px; }
+    .subtitle { margin: 4px 0 0; }
+
+    .frame {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #39466d;
+      border-radius: 18px;
+      background: #10172b;
+      box-shadow: 0 24px 80px #0009;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      touch-action: manipulation;
+    }
+
+    .hud {
+      position: absolute;
+      inset: 14px 16px auto;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+      font-size: 14px;
+      font-weight: 700;
+      text-shadow: 0 2px 6px #000;
+    }
+
+    .hud span { color: #a9f3ff; }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: #070a14b8;
+      text-align: center;
+    }
+
+    .overlay[hidden] { display: none; }
+
+    .card {
+      width: min(440px, 100%);
+      padding: 28px;
+      border: 1px solid #52638f;
+      border-radius: 18px;
+      background: #111a30ed;
+      box-shadow: 0 16px 55px #0009;
+    }
+
+    .card h2 { margin: 0 0 10px; font-size: clamp(26px, 6vw, 38px); }
+    .card p { margin: 0 0 20px; color: #c2cbe3; line-height: 1.6; }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 20px;
+      background: #68e1f4;
+      color: #07121e;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      touch-action: none;
+    }
+
+    button:hover { background: #9af0fc; }
+
+    .touch {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .touch button {
+      width: min(220px, 45%);
+      padding: 15px 12px;
+      color: #f5f7ff;
+      background: #202c4c;
+      border: 1px solid #52638f;
+    }
+
+    .touch button:first-child { background: #174e63; border-color: #3cb9d4; }
+    .help { text-align: center; }
+
+    .panel {
+      margin-top: 18px;
+      padding: 18px;
+      border: 1px solid #39466d;
+      border-radius: 16px;
+      background: #111a30;
+    }
+
+    .panel input {
+      width: min(220px, 100%);
+      margin: 4px;
+      padding: 11px;
+      border: 1px solid #52638f;
+      border-radius: 9px;
+      background: #080b16;
+      color: #f5f7ff;
+    }
+
+    .panel button { margin: 4px; }
+    #google-button { background: #f5f7ff; }
+    #auth-message { min-height: 1.4em; color: #a9f3ff; }
+    #leaderboard { padding-left: 28px; color: #dce5ff; }
+    #leaderboard li { padding: 4px 0; }
+    .notice { color: #aab4d3; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <h1>JUMPWISE</h1>
+      <p class="subtitle">Bạn sống càng lâu, boss càng hiểu bạn.</p>
+    </header>
+
+    <section class="frame" aria-label="Jumpwise game">
+      <canvas id="game" width="960" height="540" aria-label="Game runner Jumpwise"></canvas>
+
+      <div class="hud">
+        <div>ĐIỂM <span id="score">0</span></div>
+        <div id="boss-status">BOSS: ĐANG QUAN SÁT</div>
+      </div>
+
+      <div class="overlay" id="overlay">
+        <div class="card">
+          <h2 id="overlay-title">Sẵn sàng chưa?</h2>
+          <p id="overlay-text">
+            Nhảy qua chướng ngại thấp, trượt dưới chướng ngại cao.
+            Boss sẽ điều chỉnh đòn đánh theo thói quen của bạn.
+          </p>
+          <button id="start-button">BẮT ĐẦU</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="touch">
+      <button id="jump-button" type="button">NHẢY</button>
+      <button id="slide-button" type="button">GIỮ ĐỂ TRƯỢT</button>
+    </div>
+
+    <p class="help">Máy tính: Space / ↑ để nhảy · giữ ↓ để trượt · Điện thoại: dùng nút bên trên</p>
+
+    <section class="panel">
+      <div id="signed-out">
+        <input id="email" type="email" placeholder="Email" autocomplete="email">
+        <input id="password" type="password" placeholder="Mật khẩu" autocomplete="current-password">
+        <button id="login-button" type="button">Đăng nhập</button>
+        <button id="register-button" type="button">Tạo tài khoản</button>
+        <button id="google-button" type="button">Tiếp tục với Google</button>
+      </div>
+
+      <div id="signed-in" hidden>
+        <span id="user-label"></span>
+        <button id="logout-button" type="button">Đăng xuất</button>
+      </div>
+
+      <p id="auth-message" role="status">Muốn dùng đăng nhập và bảng xếp hạng? Hãy cấu hình Firebase theo hướng dẫn.</p>
+      <h2>Bảng xếp hạng</h2>
+      <ol id="leaderboard"><li>Chưa cấu hình Firebase.</li></ol>
+      <p class="notice">Đăng nhập và bảng xếp hạng trực tuyến cần cấu hình Firebase trong file này.</p>
+    </section>
+  </main>
+
+  <script type="module">
+    /*
+     * Tạo Firebase project, bật Google + Email/Password Authentication
+     * và Firestore, sau đó điền cấu hình ở đây.
+     */
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const firebaseReady = Object.values(firebaseConfig)
+      .every(value => value && !value.startsWith("YOUR_"));
+
+    const $ = selector => document.querySelector(selector);
+    const authMessage = $("#auth-message");
+    const leaderboardElement = $("#leaderboard");
+
+    let auth = null;
+    let db = null;
+    let googleProvider = null;
+    let firebaseModules = null;
+
+    function showAuthMessage(message) {
+      authMessage.textContent = message;
+    }
+
+    function friendlyAuthError(error) {
+      const messages = {
+        "auth/invalid-email": "Email không hợp lệ.",
+        "auth/missing-password": "Hãy nhập mật khẩu.",
+        "auth/weak-password": "Mật khẩu cần ít nhất 6 ký tự.",
+        "auth/email-already-in-use": "Email này đã được đăng ký.",
+        "auth/invalid-credential": "Email hoặc mật khẩu không đúng.",
+        "auth/popup-closed-by-user": "Cửa sổ đăng nhập đã bị đóng."
+      };
+
+      return messages[error.code] || "Có lỗi xảy ra. Vui lòng thử lại.";
+    }
+
+    async function refreshLeaderboard() {
+      if (!db || !firebaseModules) return;
+
+      try {
+        const { collection, getDocs, limit, orderBy, query } = firebaseModules.firestore;
+        const scoresQuery = query(
+          collection(db, "leaderboard"),
+          orderBy("score", "desc"),
+          limit(10)
+        );
+
+        const snapshot = await getDocs(scoresQuery);
+        leaderboardElement.replaceChildren();
+
+        if (snapshot.empty) {
+          leaderboardElement.innerHTML = "<li>Chưa có điểm nào — hãy chơi đầu tiên!</li>";
+          return;
+        }
+
+        snapshot.forEach(scoreDoc => {
+          const data = scoreDoc.data();
+          const item = document.createElement("li");
+          item.textContent = `${data.displayName} — ${data.score} điểm`;
+          leaderboardElement.append(item);
+        });
+      } catch (error) {
+        console.error("Leaderboard error:", error);
+        leaderboardElement.innerHTML = "<li>Không tải được bảng xếp hạng. Kiểm tra cấu hình Firestore.</li>";
+      }
+    }
+
+    async function saveScore() {
+      if (!auth?.currentUser || !db || !firebaseModules || score <= 0) {
+        if (!auth?.currentUser) {
+          showAuthMessage("Đăng nhập để lưu điểm vào bảng xếp hạng.");
+        }
+        return;
+      }
+
+      const { doc, runTransaction, serverTimestamp } = firebaseModules.firestore;
+      const user = auth.currentUser;
+      const scoreRef = doc(db, "leaderboard", user.uid);
+      const displayName = user.displayName || user.email?.split("@")[0] || "Người chơi";
+
+      try {
+        await runTransaction(db, async transaction => {
+          const existing = await transaction.get(scoreRef);
+          const oldScore = existing.exists() ? existing.data().score : 0;
+
+          if (score > oldScore) {
+            transaction.set(scoreRef, {
+              uid: user.uid,
+              displayName,
+              score: Math.floor(score),
+              updatedAt: serverTimestamp()
+            });
+          }
+        });
+
+        showAuthMessage("Điểm đã được lưu!");
+        await refreshLeaderboard();
+      } catch (error) {
+        console.error("Save score error:", error);
+        showAuthMessage("Không lưu được điểm. Kiểm tra cấu hình Firestore.");
+      }
+    }
+
+    async function initializeFirebase() {
+      if (!firebaseReady) return;
+
+      try {
+        const [appModule, authModule, firestoreModule] = await Promise.all([
+          import("https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js"),
+          import("https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js"),
+          import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js")
+        ]);
+
+        firebaseModules = { auth: authModule, firestore: firestoreModule };
+        const app = appModule.initializeApp(firebaseConfig);
+        auth = authModule.getAuth(app);
+        db = firestoreModule.getFirestore(app);
+        googleProvider = new authModule.GoogleAuthProvider();
+
+        authModule.onAuthStateChanged(auth, user => {
+          $("#signed-out").hidden = Boolean(user);
+          $("#signed-in").hidden = !user;
+
+          if (user) {
+            $("#user-label").textContent = `Đang đăng nhập: ${user.displayName || user.email}`;
+          }
+
+          void refreshLeaderboard();
+        });
+      } catch (error) {
+        console.error("Firebase initialization error:", error);
+        showAuthMessage("Không khởi tạo được Firebase. Hãy kiểm tra cấu hình.");
+      }
+    }
+
+    async function runAuth(action) {
+      if (!auth || !firebaseModules) {
+        showAuthMessage("Hãy cấu hình Firebase trong index.html trước.");
+        return;
+      }
+
+      try {
+        await action();
+        showAuthMessage("Thao tác thành công.");
+      } catch (error) {
+        showAuthMessage(friendlyAuthError(error));
+      }
+    }
+
+    $("#register-button").addEventListener("click", () => runAuth(() =>
+      firebaseModules.auth.createUserWithEmailAndPassword(
+        auth, $("#email").value.trim(), $("#password").value
+      )
+    ));
+
+    $("#login-button").addEventListener("click", () => runAuth(() =>
+      firebaseModules.auth.signInWithEmailAndPassword(
+        auth, $("#email").value.trim(), $("#password").value
+      )
+    ));
+
+    $("#google-button").addEventListener("click", () => runAuth(() =>
+      firebaseModules.auth.signInWithPopup(auth, googleProvider)
+    ));
+
+    $("#logout-button").addEventListener("click", () => runAuth(() =>
+      firebaseModules.auth.signOut(auth)
+    ));
+
+    void initializeFirebase();
+
+    // Game
+    const WIDTH = 960;
+    const HEIGHT = 540;
+    const GROUND_Y = 440;
+    const canvas = $("#game");
+    const ctx = canvas.getContext("2d");
+    const scoreElement = $("#score");
+    const bossStatus = $("#boss-status");
+    const overlay = $("#overlay");
+    const overlayTitle = $("#overlay-title");
+    const overlayText = $("#overlay-text");
+    const startButton = $("#start-button");
+    const jumpButton = $("#jump-button");
+    const slideButton = $("#slide-button");
+
+    const player = {
+      x: 150,
+      y: GROUND_Y - 58,
+      width: 38,
+      height: 58,
+      velocityY: 0,
+      sliding: false,
+      grounded: true
+    };
+
+    const stats = { jumps: 0, slides: 0, earlyJumps: 0, lateJumps: 0 };
+
+    let obstacles = [];
+    let particles = [];
+    let gameState = "ready";
+    let elapsed = 0;
+    let score = 0;
+    let speed = 340;
+    let spawnTimer = 1.3;
+    let bossTimer = 18;
+    let bossActive = false;
+    let bossTimeLeft = 0;
+    let attackTimer = 0;
+    let pendingAttack = null;
+    let lastTime = 0;
+    let groundOffset = 0;
+    let warningPulse = 0;
+    let slideHeld = false;
+
+    function resetGame() {
+      obstacles = [];
+      particles = [];
+      Object.assign(stats, { jumps: 0, slides: 0, earlyJumps: 0, lateJumps: 0 });
+      Object.assign(player, {
+        x: 150, y: GROUND_Y - 58, width: 38, height: 58,
+        velocityY: 0, sliding: false, grounded: true
+      });
+
+      elapsed = 0;
+      score = 0;
+      speed = 340;
+      spawnTimer = 1.1;
+      bossTimer = 18;
+      bossActive = false;
+      bossTimeLeft = 0;
+      attackTimer = 0;
+      pendingAttack = null;
+      slideHeld = false;
+      gameState = "playing";
+      overlay.hidden = true;
+      lastTime = performance.now();
+    }
+
+    function endGame() {
+      gameState = "over";
+      player.sliding = false;
+      slideHeld = false;
+      overlayTitle.textContent = "Hết lượt!";
+      overlayText.textContent =
+        `Bạn đạt ${Math.floor(score)} điểm. Boss đã quan sát ${stats.jumps} lần nhảy và ${stats.slides} lần trượt. Thử đổi chiến thuật nhé!`;
+      startButton.textContent = "CHƠI LẠI";
+      overlay.hidden = false;
+      void saveScore();
+    }
+
+    function startOrRestart() {
+      if (gameState !== "playing") resetGame();
+    }
+
+    function getPlayerRect() {
+      const height = player.sliding ? 28 : player.height;
+      return {
+        x: player.x,
+        y: player.sliding ? GROUND_Y - height : player.y,
+        width: player.width,
+        height
+      };
+    }
+
+    function jump() {
+      if (gameState !== "playing" || !player.grounded) return;
+
+      player.sliding = false;
+      player.velocityY = -650;
+      player.grounded = false;
+      stats.jumps++;
+
+      const next = obstacles
+        .filter(item => item.x + item.width >= player.x)
+        .sort((a, b) => a.x - b.x)[0];
+
+      if (next) {
+        const distance = next.x - (player.x + player.width);
+        if (distance < 150) stats.lateJumps++;
+        else stats.earlyJumps++;
+      }
+
+      burst(player.x + 15, GROUND_Y - 3, "#73e8fa", 5);
+    }
+
+    function setSliding(value) {
+      if (gameState !== "playing") return;
+      if (value && !slideHeld) stats.slides++;
+      slideHeld = value;
+      player.sliding = value && player.grounded;
+    }
+
+    function spawnObstacle(type = null, x = WIDTH + 20) {
+      const chosen = type || (Math.random() < 0.55 ? "low" : "high");
+
+      if (chosen === "low") {
+        obstacles.push({
+          type: "low", x, y: GROUND_Y - 44,
+          width: 38 + Math.random() * 12, height: 44, color: "#ff718b"
+        });
+      } else {
+        obstacles.push({
+          type: "high", x, y: GROUND_Y - 80,
+          width: 78, height: 36, color: "#ffc66d"
+        });
+      }
+    }
+
+    function spawnCombo() {
+      spawnObstacle("low", WIDTH + 20);
+      spawnObstacle("high", WIDTH + 410);
+    }
+
+    function chooseBossAttack() {
+      const total = stats.jumps + stats.slides;
+      if (total < 3) return Math.random() < 0.5 ? "floor" : "ceiling";
+
+      const jumpShare = stats.jumps / total;
+      const lateShare = stats.lateJumps /
+        Math.max(1, stats.earlyJumps + stats.lateJumps);
+
+      if (jumpShare > 0.6) return lateShare > 0.55 ? "ceiling" : "combo";
+      if (jumpShare < 0.4) return "floor";
+      return "combo";
+    }
+
+    function attackName(type) {
+      if (type === "floor") return "QUÉT SÀN — CHUẨN BỊ NHẢY!";
+      if (type === "ceiling") return "ÉP TRÊN — CHUẨN BỊ TRƯỢT!";
+      return "ĐÒN KẾT HỢP — NHẢY RỒI TRƯỢT!";
+    }
+
+    function startBossAttack() {
+      pendingAttack = { type: chooseBossAttack(), time: 1.05 };
+      warningPulse = 1;
+    }
+
+    function launchBossAttack(type) {
+      if (type === "floor") spawnObstacle("low");
+      else if (type === "ceiling") spawnObstacle("high");
+      else spawnCombo();
+    }
+
+    function updateBoss(dt) {
+      bossTimer -= dt;
+
+      if (!bossActive && bossTimer <= 0) {
+        bossActive = true;
+        bossTimeLeft = 12;
+        attackTimer = 0.7;
+      }
+
+      if (!bossActive) return;
+
+      bossTimeLeft -= dt;
+      attackTimer -= dt;
+
+      if (pendingAttack) {
+        pendingAttack.time -= dt;
+
+        if (pendingAttack.time <= 0) {
+          launchBossAttack(pendingAttack.type);
+          pendingAttack = null;
+          attackTimer = 2.8;
+        }
+      } else if (attackTimer <= 0 && bossTimeLeft > 1) {
+        startBossAttack();
+      }
+
+      if (bossTimeLeft <= 0) {
+        bossActive = false;
+        bossTimer = 24;
+        pendingAttack = null;
+      }
+    }
+
+    function update(dt) {
+      if (gameState !== "playing") return;
+
+      elapsed += dt;
+      score += dt * 10;
+      speed = Math.min(500, 340 + elapsed * 4);
+      groundOffset = (groundOffset + speed * dt) % 60;
+      warningPulse = Math.max(0, warningPulse - dt * 1.5);
+      updateBoss(dt);
+
+      if (!bossActive) {
+        spawnTimer -= dt;
+
+        if (spawnTimer <= 0) {
+          spawnObstacle();
+          const spacing = 1.3 + Math.random() * 0.5;
+          spawnTimer = Math.max(1.05, spacing - elapsed * 0.002);
+        }
+      }
+
+      if (!player.grounded) {
+        player.velocityY += 1850 * dt;
+        player.y += player.velocityY * dt;
+
+        if (player.y >= GROUND_Y - player.height) {
+          player.y = GROUND_Y - player.height;
+          player.velocityY = 0;
+          player.grounded = true;
+        }
+      } else if (!slideHeld) {
+        player.sliding = false;
+      }
+
+      for (const obstacle of obstacles) obstacle.x -= speed * dt;
+      obstacles = obstacles.filter(item => item.x + item.width > -20);
+
+      const playerRect = getPlayerRect();
+      for (const obstacle of obstacles) {
+        if (rectsOverlap(playerRect, obstacle)) {
+          endGame();
+          return;
+        }
+      }
+
+      for (const particle of particles) {
+        particle.x += particle.vx * dt;
+        particle.y += particle.vy * dt;
+        particle.life -= dt;
+      }
+      particles = particles.filter(particle => particle.life > 0);
+
+      scoreElement.textContent = Math.floor(score);
+      bossStatus.textContent = pendingAttack
+        ? attackName(pendingAttack.type)
+        : bossActive
+          ? "BOSS: ĐANG TẤN CÔNG"
+          : `BOSS: ${Math.max(0, Math.ceil(bossTimer))}s`;
+    }
+
+    function rectsOverlap(a, b) {
+      const inset = 5;
+      return a.x + inset < b.x + b.width &&
+        a.x + a.width - inset > b.x &&
+        a.y + inset < b.y + b.height &&
+        a.y + a.height - inset > b.y;
+    }
+
+    function burst(x, y, color, count) {
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x, y,
+          vx: (Math.random() - 0.5) * 150,
+          vy: -Math.random() * 120,
+          life: 0.35 + Math.random() * 0.3,
+          color
+        });
+      }
+    }
+
+    function roundedRect(context, x, y, width, height, radius) {
+      const r = Math.min(radius, width / 2, height / 2);
+      context.beginPath();
+      context.moveTo(x + r, y);
+      context.arcTo(x + width, y, x + width, y + height, r);
+      context.arcTo(x + width, y + height, x, y + height, r);
+      context.arcTo(x, y + height, x, y, r);
+      context.arcTo(x, y, x + width, y, r);
+      context.closePath();
+    }
+
+    function drawBackground() {
+      const sky = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+      sky.addColorStop(0, "#111a35");
+      sky.addColorStop(0.7, "#202747");
+      sky.addColorStop(1, "#10182b");
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+      ctx.fillStyle = "#b8d7ff";
+      for (let i = 0; i < 42; i++) {
+        ctx.globalAlpha = 0.25 + (i % 4) * 0.12;
+        ctx.fillRect((i * 197 + 43) % WIDTH, (i * 83 + 27) % 250, 2, 2);
+      }
+      ctx.globalAlpha = 1;
+
+      ctx.fillStyle = "#192443";
+      ctx.beginPath();
+      ctx.moveTo(0, 390);
+      for (let x = 0; x <= WIDTH; x += 120) {
+        ctx.lineTo(x + 60, 300 + ((x / 120) % 2) * 55);
+        ctx.lineTo(x + 120, 390);
+      }
+      ctx.lineTo(WIDTH, GROUND_Y);
+      ctx.lineTo(0, GROUND_Y);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#0c1222";
+      ctx.fillRect(0, GROUND_Y, WIDTH, HEIGHT - GROUND_Y);
+      ctx.strokeStyle = "#4a5a86";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, GROUND_Y);
+      ctx.lineTo(WIDTH, GROUND_Y);
+      ctx.stroke();
+
+      ctx.fillStyle = "#334366";
+      for (let x = -groundOffset; x < WIDTH; x += 60) {
+        ctx.fillRect(x, GROUND_Y + 24, 28, 3);
+      }
+    }
+
+    function drawPlayer() {
+      const height = player.sliding ? 28 : player.height;
+      const y = player.sliding ? GROUND_Y - height : player.y;
+
+      ctx.save();
+      ctx.shadowColor = "#5ce8ff";
+      ctx.shadowBlur = 18;
+      ctx.fillStyle = "#72e8f7";
+      roundedRect(ctx, player.x, y, player.width + (player.sliding ? 16 : 0), height, 12);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#11243b";
+      ctx.fillRect(player.x + 23, y + (player.sliding ? 7 : 15), 6, 6);
+      ctx.restore();
+    }
+
+    function drawObstacles() {
+      for (const obstacle of obstacles) {
+        ctx.save();
+        ctx.shadowColor = obstacle.color;
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = obstacle.color;
+        roundedRect(ctx, obstacle.x, obstacle.y, obstacle.width, obstacle.height, 8);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#ffffff55";
+        ctx.fillRect(obstacle.x + 7, obstacle.y + 7, obstacle.width - 14, 3);
+        ctx.restore();
+      }
+    }
+
+    function drawBoss() {
+      if (bossActive) {
+        const bob = Math.sin(elapsed * 5) * 7;
+        ctx.save();
+        ctx.globalAlpha = 0.88;
+        ctx.shadowColor = "#ff4f83";
+        ctx.shadowBlur = 24;
+        ctx.fillStyle = "#a53668";
+        roundedRect(ctx, 765, 100 + bob, 130, 106, 24);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#ffe5f0";
+        ctx.fillRect(790, 131 + bob, 15, 15);
+        ctx.fillRect(850, 131 + bob, 15, 15);
+        ctx.fillStyle = "#271326";
+        ctx.fillRect(795, 136 + bob, 6, 7);
+        ctx.fillRect(855, 136 + bob, 6, 7);
+        ctx.fillStyle = "#ffb2cb";
+        ctx.fillRect(813, 174 + bob, 36, 7);
+        ctx.restore();
+      }
+
+      if (pendingAttack) {
+        ctx.save();
+        ctx.globalAlpha = 0.45 + warningPulse * 0.5;
+        ctx.fillStyle = "#ff547d";
+        ctx.fillRect(0, GROUND_Y - 3, WIDTH, 3);
+        ctx.font = "bold 22px system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText(attackName(pendingAttack.type), WIDTH / 2, 265);
+        ctx.restore();
+      }
+    }
+
+    function draw() {
+      drawBackground();
+      drawBoss();
+      drawObstacles();
+      drawPlayer();
+
+      for (const particle of particles) {
+        ctx.globalAlpha = Math.max(0, particle.life * 2);
+        ctx.fillStyle = particle.color;
+        ctx.fillRect(particle.x, particle.y, 4, 4);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function frame(now) {
+      const dt = Math.min((now - lastTime) / 1000 || 0, 0.033);
+      lastTime = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(frame);
+    }
+
+    window.addEventListener("keydown", event => {
+      if (["Space", "ArrowUp", "ArrowDown"].includes(event.code)) event.preventDefault();
+
+      if (event.code === "Space" || event.code === "ArrowUp") {
+        if (gameState !== "playing") startOrRestart();
+        else if (!event.repeat) jump();
+      }
+
+      if (event.code === "ArrowDown") setSliding(true);
+    });
+
+    window.addEventListener("keyup", event => {
+      if (event.code === "ArrowDown") setSliding(false);
+    });
+
+    window.addEventListener("blur", () => setSliding(false));
+
+    canvas.addEventListener("pointerdown", event => {
+      event.preventDefault();
+      if (gameState !== "playing") startOrRestart();
+      else jump();
+    });
+
+    startButton.addEventListener("click", startOrRestart);
+
+    jumpButton.addEventListener("pointerdown", event => {
+      event.preventDefault();
+      if (gameState !== "playing") startOrRestart();
+      else jump();
+    });
+
+    slideButton.addEventListener("pointerdown", event => {
+      event.preventDefault();
+      slideButton.setPointerCapture(event.pointerId);
+      setSliding(true);
+    });
+
+    for (const eventName of ["pointerup", "pointercancel", "lostpointercapture"]) {
+      slideButton.addEventListener(eventName, () => setSliding(false));
+    }
+
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>
