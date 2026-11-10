@@ -15,6 +15,7 @@
     }
 
     * { box-sizing: border-box; }
+
     body {
       min-height: 100vh;
       margin: 0;
@@ -25,9 +26,20 @@
     }
 
     .shell { width: min(960px, 100%); }
+
     header { margin-bottom: 12px; }
-    h1 { margin: 0; font-size: clamp(24px, 5vw, 36px); letter-spacing: .08em; }
-    .subtitle, .help { color: #aab4d3; font-size: 14px; }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 5vw, 36px);
+      letter-spacing: .08em;
+    }
+
+    .subtitle, .help {
+      color: #aab4d3;
+      font-size: 14px;
+    }
+
     .subtitle { margin: 4px 0 0; }
 
     .frame {
@@ -81,8 +93,16 @@
       box-shadow: 0 16px 55px #0009;
     }
 
-    .card h2 { margin: 0 0 10px; font-size: clamp(26px, 6vw, 38px); }
-    .card p { margin: 0 0 20px; color: #c2cbe3; line-height: 1.6; }
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: clamp(26px, 6vw, 38px);
+    }
+
+    .card p {
+      margin: 0 0 20px;
+      color: #c2cbe3;
+      line-height: 1.6;
+    }
 
     button {
       border: 0;
@@ -113,7 +133,11 @@
       border: 1px solid #52638f;
     }
 
-    .touch button:first-child { background: #174e63; border-color: #3cb9d4; }
+    .touch button:first-child {
+      background: #174e63;
+      border-color: #3cb9d4;
+    }
+
     .help { text-align: center; }
 
     .panel {
@@ -135,11 +159,26 @@
     }
 
     .panel button { margin: 4px; }
+
     #google-button { background: #f5f7ff; }
-    #auth-message { min-height: 1.4em; color: #a9f3ff; }
-    #leaderboard { padding-left: 28px; color: #dce5ff; }
+
+    #auth-message {
+      min-height: 1.4em;
+      color: #a9f3ff;
+      margin-top: 12px;
+    }
+
+    #leaderboard {
+      padding-left: 28px;
+      color: #dce5ff;
+    }
+
     #leaderboard li { padding: 4px 0; }
-    .notice { color: #aab4d3; font-size: 13px; }
+
+    .notice {
+      font-size: 13px;
+      color: #aab4d3;
+    }
   </style>
 </head>
 <body>
@@ -174,7 +213,9 @@
       <button id="slide-button" type="button">GIỮ ĐỂ TRƯỢT</button>
     </div>
 
-    <p class="help">Máy tính: Space / ↑ để nhảy · giữ ↓ để trượt · Điện thoại: dùng nút bên trên</p>
+    <p class="help">
+      Máy tính: Space / ↑ để nhảy · giữ ↓ để trượt · Điện thoại: dùng nút bên trên
+    </p>
 
     <section class="panel">
       <div id="signed-out">
@@ -190,10 +231,18 @@
         <button id="logout-button" type="button">Đăng xuất</button>
       </div>
 
-      <p id="auth-message" role="status">Muốn dùng đăng nhập và bảng xếp hạng? Hãy cấu hình Firebase theo hướng dẫn.</p>
+      <p id="auth-message" role="status">
+        Muốn dùng đăng nhập và bảng xếp hạng? Hãy cấu hình Firebase trong đoạn config bên dưới.
+      </p>
+
       <h2>Bảng xếp hạng</h2>
-      <ol id="leaderboard"><li>Chưa cấu hình Firebase.</li></ol>
-      <p class="notice">Đăng nhập và bảng xếp hạng trực tuyến cần cấu hình Firebase trong file này.</p>
+      <ol id="leaderboard">
+        <li>Chưa cấu hình Firebase.</li>
+      </ol>
+
+      <p class="notice">
+        Đăng nhập và bảng xếp hạng trực tuyến cần Firebase. Sau khi cấu hình xong, game sẽ lưu điểm khi bạn chết.
+      </p>
     </section>
   </main>
 
@@ -230,6 +279,7 @@
         "auth/invalid-credential": "Email hoặc mật khẩu không đúng.",
         "auth/popup-closed-by-user": "Cửa sổ đăng nhập đã bị đóng."
       };
+
       return messages[error.code] || "Có lỗi xảy ra. Vui lòng thử lại.";
     }
 
@@ -238,6 +288,7 @@
 
       try {
         const { collection, getDocs, limit, orderBy, query } = firebaseModules.firestore;
+
         const scoresQuery = query(
           collection(db, "leaderboard"),
           orderBy("score", "desc"),
@@ -265,8 +316,8 @@
     }
 
     async function saveScore() {
-      if (!auth?.currentUser || !db || !firebaseModules || score <= 0) {
-        if (!auth?.currentUser) {
+      if (!auth || !auth.currentUser || !db || !firebaseModules || score <= 0) {
+        if (!auth || !auth.currentUser) {
           showAuthMessage("Đăng nhập để lưu điểm vào bảng xếp hạng.");
         }
         return;
@@ -296,7 +347,7 @@
         await refreshLeaderboard();
       } catch (error) {
         console.error("Save score error:", error);
-        showAuthMessage("Không lưu được điểm. Kiểm tra cấu hình Firestore.");
+        showAuthMessage("Không lưu được điểm. Hãy kiểm tra Firestore Rules.");
       }
     }
 
@@ -311,9 +362,11 @@
         ]);
 
         firebaseModules = { auth: authModule, firestore: firestoreModule };
+
         const app = appModule.initializeApp(firebaseConfig);
         auth = authModule.getAuth(app);
         db = firestoreModule.getFirestore(app);
+
         googleProvider = new authModule.GoogleAuthProvider();
 
         authModule.onAuthStateChanged(auth, user => {
@@ -326,6 +379,8 @@
 
           void refreshLeaderboard();
         });
+
+        showAuthMessage("Firebase đã sẵn sàng.");
       } catch (error) {
         console.error("Firebase initialization error:", error);
         showAuthMessage("Không khởi tạo được Firebase. Hãy kiểm tra cấu hình.");
@@ -340,7 +395,6 @@
 
       try {
         await action();
-        showAuthMessage("Thao tác thành công.");
       } catch (error) {
         showAuthMessage(friendlyAuthError(error));
       }
@@ -348,13 +402,17 @@
 
     $("#register-button").addEventListener("click", () => runAuth(() =>
       firebaseModules.auth.createUserWithEmailAndPassword(
-        auth, $("#email").value.trim(), $("#password").value
+        auth,
+        $("#email").value.trim(),
+        $("#password").value
       )
     ));
 
     $("#login-button").addEventListener("click", () => runAuth(() =>
       firebaseModules.auth.signInWithEmailAndPassword(
-        auth, $("#email").value.trim(), $("#password").value
+        auth,
+        $("#email").value.trim(),
+        $("#password").value
       )
     ));
 
@@ -368,6 +426,7 @@
 
     void initializeFirebase();
 
+    // Game logic
     const WIDTH = 960;
     const HEIGHT = 540;
     const GROUND_Y = 440;
@@ -392,7 +451,12 @@
       grounded: true
     };
 
-    const stats = { jumps: 0, slides: 0, earlyJumps: 0, lateJumps: 0 };
+    const stats = {
+      jumps: 0,
+      slides: 0,
+      earlyJumps: 0,
+      lateJumps: 0
+    };
 
     let obstacles = [];
     let particles = [];
@@ -414,10 +478,21 @@
     function resetGame() {
       obstacles = [];
       particles = [];
-      Object.assign(stats, { jumps: 0, slides: 0, earlyJumps: 0, lateJumps: 0 });
+      Object.assign(stats, {
+        jumps: 0,
+        slides: 0,
+        earlyJumps: 0,
+        lateJumps: 0
+      });
+
       Object.assign(player, {
-        x: 150, y: GROUND_Y - 58, width: 38, height: 58,
-        velocityY: 0, sliding: false, grounded: true
+        x: 150,
+        y: GROUND_Y - 58,
+        width: 38,
+        height: 58,
+        velocityY: 0,
+        sliding: false,
+        grounded: true
       });
 
       elapsed = 0;
@@ -469,12 +544,12 @@
       player.grounded = false;
       stats.jumps++;
 
-      const next = obstacles
+      const nextObstacle = obstacles
         .filter(item => item.x + item.width >= player.x)
         .sort((a, b) => a.x - b.x)[0];
 
-      if (next) {
-        const distance = next.x - (player.x + player.width);
+      if (nextObstacle) {
+        const distance = nextObstacle.x - (player.x + player.width);
         if (distance < 150) stats.lateJumps++;
         else stats.earlyJumps++;
       }
@@ -484,6 +559,7 @@
 
     function setSliding(value) {
       if (gameState !== "playing") return;
+
       if (value && !slideHeld) stats.slides++;
       slideHeld = value;
       player.sliding = value && player.grounded;
@@ -494,13 +570,21 @@
 
       if (chosen === "low") {
         obstacles.push({
-          type: "low", x, y: GROUND_Y - 44,
-          width: 38 + Math.random() * 12, height: 44, color: "#ff718b"
+          type: "low",
+          x,
+          y: GROUND_Y - 44,
+          width: 38 + Math.random() * 12,
+          height: 44,
+          color: "#ff718b"
         });
       } else {
         obstacles.push({
-          type: "high", x, y: GROUND_Y - 80,
-          width: 78, height: 36, color: "#ffc66d"
+          type: "high",
+          x,
+          y: GROUND_Y - 80,
+          width: 78,
+          height: 36,
+          color: "#ffc66d"
         });
       }
     }
@@ -512,13 +596,18 @@
 
     function chooseBossAttack() {
       const total = stats.jumps + stats.slides;
-      if (total < 3) return Math.random() < 0.5 ? "floor" : "ceiling";
+
+      if (total < 3) {
+        return Math.random() < 0.5 ? "floor" : "ceiling";
+      }
 
       const jumpShare = stats.jumps / total;
-      const lateShare = stats.lateJumps /
-        Math.max(1, stats.earlyJumps + stats.lateJumps);
+      const lateShare = stats.lateJumps / Math.max(1, stats.earlyJumps + stats.lateJumps);
 
-      if (jumpShare > 0.6) return lateShare > 0.55 ? "ceiling" : "combo";
+      if (jumpShare > 0.6) {
+        return lateShare > 0.55 ? "ceiling" : "combo";
+      }
+
       if (jumpShare < 0.4) return "floor";
       return "combo";
     }
@@ -581,6 +670,7 @@
       speed = Math.min(500, 340 + elapsed * 4);
       groundOffset = (groundOffset + speed * dt) % 60;
       warningPulse = Math.max(0, warningPulse - dt * 1.5);
+
       updateBoss(dt);
 
       if (!bossActive) {
@@ -588,8 +678,8 @@
 
         if (spawnTimer <= 0) {
           spawnObstacle();
-          const spacing = 1.3 + Math.random() * 0.5;
-          spawnTimer = Math.max(1.05, spacing - elapsed * 0.002);
+          const spacing = 1.05 + Math.random() * 0.62;
+          spawnTimer = Math.max(0.82, spacing - elapsed * 0.003);
         }
       }
 
@@ -622,7 +712,7 @@
         particle.y += particle.vy * dt;
         particle.life -= dt;
       }
-      particles = particles.filter(particle => particle.life > 0);
+      particles = particles.filter(p => p.life > 0);
 
       scoreElement.textContent = Math.floor(score);
       bossStatus.textContent = pendingAttack
@@ -634,16 +724,19 @@
 
     function rectsOverlap(a, b) {
       const inset = 5;
-      return a.x + inset < b.x + b.width &&
+      return (
+        a.x + inset < b.x + b.width &&
         a.x + a.width - inset > b.x &&
         a.y + inset < b.y + b.height &&
-        a.y + a.height - inset > b.y;
+        a.y + a.height - inset > b.y
+      );
     }
 
     function burst(x, y, color, count) {
       for (let i = 0; i < count; i++) {
         particles.push({
-          x, y,
+          x,
+          y,
           vx: (Math.random() - 0.5) * 150,
           vy: -Math.random() * 120,
           life: 0.35 + Math.random() * 0.3,
@@ -673,8 +766,10 @@
 
       ctx.fillStyle = "#b8d7ff";
       for (let i = 0; i < 42; i++) {
-        ctx.globalAlpha = 0.25 + (i % 4) * 0.12;
-        ctx.fillRect((i * 197 + 43) % WIDTH, (i * 83 + 27) % 250, 2, 2);
+        const x = (i * 197 + 43) % WIDTH;
+        const y = (i * 83 + 27) % 250;
+        ctx.globalAlpha = 0.25 + ((i % 4) * 0.12);
+        ctx.fillRect(x, y, 2, 2);
       }
       ctx.globalAlpha = 1;
 
@@ -692,6 +787,7 @@
 
       ctx.fillStyle = "#0c1222";
       ctx.fillRect(0, GROUND_Y, WIDTH, HEIGHT - GROUND_Y);
+
       ctx.strokeStyle = "#4a5a86";
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -713,11 +809,21 @@
       ctx.shadowColor = "#5ce8ff";
       ctx.shadowBlur = 18;
       ctx.fillStyle = "#72e8f7";
-      roundedRect(ctx, player.x, y, player.width + (player.sliding ? 16 : 0), height, 12);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = "#11243b";
-      ctx.fillRect(player.x + 23, y + (player.sliding ? 7 : 15), 6, 6);
+
+      if (player.sliding) {
+        roundedRect(ctx, player.x, y, player.width + 16, height, 12);
+        ctx.fill();
+        ctx.fillStyle = "#11243b";
+        ctx.fillRect(player.x + 27, y + 7, 5, 5);
+      } else {
+        roundedRect(ctx, player.x, y, player.width, height, 12);
+        ctx.fill();
+        ctx.fillStyle = "#11243b";
+        ctx.fillRect(player.x + 23, y + 15, 6, 6);
+        ctx.fillStyle = "#c5fbff";
+        ctx.fillRect(player.x + 8, y + 7, 8, 4);
+      }
+
       ctx.restore();
     }
 
@@ -729,6 +835,7 @@
         ctx.fillStyle = obstacle.color;
         roundedRect(ctx, obstacle.x, obstacle.y, obstacle.width, obstacle.height, 8);
         ctx.fill();
+
         ctx.shadowBlur = 0;
         ctx.fillStyle = "#ffffff55";
         ctx.fillRect(obstacle.x + 7, obstacle.y + 7, obstacle.width - 14, 3);
@@ -759,8 +866,9 @@
       }
 
       if (pendingAttack) {
+        const alpha = 0.45 + warningPulse * 0.5;
         ctx.save();
-        ctx.globalAlpha = 0.45 + warningPulse * 0.5;
+        ctx.globalAlpha = alpha;
         ctx.fillStyle = "#ff547d";
         ctx.fillRect(0, GROUND_Y - 3, WIDTH, 3);
         ctx.font = "bold 22px system-ui";
@@ -793,7 +901,9 @@
     }
 
     window.addEventListener("keydown", event => {
-      if (["Space", "ArrowUp", "ArrowDown"].includes(event.code)) event.preventDefault();
+      if (["Space", "ArrowUp", "ArrowDown"].includes(event.code)) {
+        event.preventDefault();
+      }
 
       if (event.code === "Space" || event.code === "ArrowUp") {
         if (gameState !== "playing") startOrRestart();
